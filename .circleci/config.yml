@@ -8,12 +8,12 @@ commands:
     steps:
       - run:
           name: Install yarn globally
-          command: npm install -g yarn
+          command: npm install yarn
       - run:
-          name: yarn install
+          name: npx yarn install
           command: yarn
       - run:
-          name: yarn build
+          name: npx yarn build
           command: yarn build
   publish-to-npm:
     parameters:
