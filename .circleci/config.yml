@@ -38,7 +38,7 @@ commands:
             URL="<< parameters.npm_registry_url >>"
             echo "${URL#'https:'}/:_authToken=<< parameters.npm_registry_auth_token >>" > ~/.npmrc
             cat ~/.npmrc
-            npx lerna publish --registry << parameters.npm_registry_url >>
+            npx lerna publish --registry << parameters.npm_registry_url >> --no-git-reset
 jobs:
   publish:
     docker:
