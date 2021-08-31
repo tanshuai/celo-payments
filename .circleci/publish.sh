@@ -44,10 +44,10 @@ case "$1" in
 esac
 NEW_VERSION="$MAJOR.$MINOR.$PATCH"
 echo "$NEW_VERSION"
-npx lerna version "$NEW_VERSION" --no-git-tag-version --no-push --force-publish --yes
+npx lerna version  --no-git-tag-version --no-push --force-publish --yes
 
 echo "📡 Publishing ..."
-npx lerna publish --registry $NPM_REGISTRY_URL --no-git-reset  --force-publish --yes
+npx lerna publish "$NEW_VERSION" --registry $NPM_REGISTRY_URL --no-git-reset --no-git-tag-version --no-push --force-publish --yes
 
 echo "🎊 New version is $NEW_VERSION"
 echo "✅ DONE"
