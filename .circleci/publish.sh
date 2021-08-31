@@ -21,17 +21,33 @@ if [ $NPM_REGISTRY_URL == 'https://registry.npmjs.org/' ]; then
   exit 1
 fi
 
-echo "⏫ Bumping '$1' version ..."
+echo "⏫ Bumping version ..."
 
-CURRENT_VERSION=$(npm view --registry $NPM_REGISTRY_URL ${PACKAGE_NAME}@latest version || node -p "require('./package.json').version")
+CURRENT_VERSION=$(npm view --registry $NPM_REGISTRY_URL @celo/payments-sdk@latest version || node -p "require('./packages/sdk/package.json').version")
 echo "⌗ Current version: $CURRENT_VERSION"
 
-echo "⌗ Bumping to:"
-npm version --no-git-tag-version --allow-same-version "$CURRENT_VERSION" > /dev/null || exit 1
-NEW_VERSION=$(npm version --no-git-tag-version "$1") || exit 1
+echo -n "⌗ Bumping to: "
+RE='[^0-9]*\([0-9]*\)[.]\([0-9]*\)[.]\([0-9]*\)\([0-9A-Za-z-]*\)'
+MAJOR=`echo $CURRENT_VERSION | sed -e "s#$RE#\1#"`
+MINOR=`echo $CURRENT_VERSION | sed -e "s#$RE#\2#"`
+PATCH=`echo $CURRENT_VERSION | sed -e "s#$RE#\3#"`
+case "$1" in
+  major)
+    let MAJOR+=1
+    ;;
+  minor)
+    let MINOR+=1
+    ;;
+  patch)
+    let PATCH+=1
+    ;;
+esac
+NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+echo "$NEW_VERSION"
+npx lerna version "$NEW_VERSION" --no-git-tag-version --no-push --force-publish --yes
 
 echo "📡 Publishing ..."
-npm publish --registry $NPM_REGISTRY_URL || exit 1
+npx lerna publish --registry $NPM_REGISTRY_URL --no-git-reset  --force-publish --yes
 
 echo "🎊 New version is $NEW_VERSION"
 echo "✅ DONE"

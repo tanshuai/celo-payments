@@ -40,7 +40,7 @@ commands:
             cat ~/.npmrc
             git add -u
             git commit -m "dummy commit to avoid git errors when publishing - should not be pushed ever"
-            npx lerna publish --registry << parameters.npm_registry_url >> --no-git-reset
+            ./.circleci/publish.sh patch
 jobs:
   publish:
     docker:
