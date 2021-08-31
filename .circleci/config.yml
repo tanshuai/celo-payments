@@ -30,7 +30,7 @@ commands:
           name: Publish @celo/payments-types to First's npm registry
           command: |
             git remote set-url origin https://<< parameters.github_access_token >>@github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME
-            URL='<< parameters.npm_registry_url >>'
+            URL="<< parameters.npm_registry_url >>"
             echo "${URL#'https:'}/:_authToken=<< parameters.npm_registry_auth_token >>" > ~/.npmrc
             cat ~/.npmrc
             cd ./packages/types/
@@ -39,7 +39,7 @@ commands:
           name: Publish @celo/payments-sdk to First's npm registry
           command: |
             git remote set-url origin https://<< parameters.github_access_token >>@github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME
-            URL='<< parameters.npm_registry_url >>'
+            URL="<< parameters.npm_registry_url >>"
             echo "${URL#'https:'}/:_authToken=<< parameters.npm_registry_auth_token >>" > ~/.npmrc
             cat ~/.npmrc
             cd ./packages/sdk/
