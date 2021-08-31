@@ -34,7 +34,7 @@ commands:
             echo "${URL#'https:'}/:_authToken=<< parameters.npm_registry_auth_token >>" > ~/.npmrc
             cat ~/.npmrc
             cd ./packages/types/
-            ./.circleci/publish.sh << parameters.version >>
+            ../../.circleci/publish.sh << parameters.version >>
       - run:
           name: Publish @celo/payments-sdk to First's npm registry
           command: |
@@ -43,7 +43,7 @@ commands:
             echo "${URL#'https:'}/:_authToken=<< parameters.npm_registry_auth_token >>" > ~/.npmrc
             cat ~/.npmrc
             cd ./packages/sdk/
-            ./.circleci/publish.sh << parameters.version >>
+            ../../.circleci/publish.sh << parameters.version >>
 jobs:
   publish:
     docker:
