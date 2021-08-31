@@ -73,7 +73,7 @@ workflows:
           github_access_token: $GITHUB_ACCESS_TOKEN
           npm_registry_url: $NPM_REGISTRY_URL
           npm_registry_auth_token: $NPM_REGISTRY_AUTH_TOKEN
-          context: production
+          context: staging
           filters:
             branches:
               only:
