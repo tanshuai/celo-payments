@@ -27,6 +27,11 @@ commands:
         type: string
     steps:
       - run:
+          name: Set git user/email config
+          command: |
+            git config --global user.email "dev@firstdag.com"
+            git config --global user.name "FirstDAG"
+      - run:
           name: Publish @celo/payments-types to First's npm registry
           command: |
             git remote set-url origin https://<< parameters.github_access_token >>@github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME
