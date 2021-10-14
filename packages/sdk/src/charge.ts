@@ -1,8 +1,9 @@
 import { Err, ErrorResult, Ok } from '@celo/base';
-import { fetchWithRetries, parseDeepLink } from './helpers';
 import {
   AbortCodes,
   AbortRequest,
+  EIP712Parameter,
+  EIP712Schemas,
   GetPaymentInfoRequest,
   InitChargeRequest,
   JsonRpcErrorResponse,
@@ -10,15 +11,17 @@ import {
   JsonRpcMethodNotFoundError,
   JsonRpcReferenceIdNotFoundError,
   JsonRpcRiskChecksFailedError,
+  OffchainHeaders,
   PayerData,
   PaymentInfo,
   PaymentMessageRequest,
   ReadyForSettlementRequest,
 } from '@celo/payments-types';
 import { randomInt } from 'crypto';
-import { ChainHandler } from './handlers';
-import { buildTypedPaymentRequest } from './signing';
 import { OnchainFailureError } from './errors/onchain-failure';
+import { ChainHandler } from './handlers';
+import { fetchWithRetries, parseDeepLink, verifySignature } from './helpers';
+import { buildTypedPaymentRequest } from '@celo/payments-utils';
 
 interface JsonRpcErrorResult extends Error {
   name: string;
@@ -61,30 +64,66 @@ export class Charge {
    * Creates authenticated requests to the `apiBase`
    *
    * @param message the HTTP body with the JSON-RPC params of the request
+   * @param requestSchema
+   * @param responseSchema
+   * @param responseSchemaName
    */
-  private async request(message: PaymentMessageRequest) {
+  private async request(
+    message: PaymentMessageRequest,
+    requestSchema: EIP712Parameter[],
+    responseSchema: EIP712Parameter[],
+    responseSchemaName: string
+  ) {
     const requestId = randomInt(281474976710655);
+    Object.assign(message, {
+      id: requestId,
+      jsonrpc: '2.0',
+    });
+    const typedData = buildTypedPaymentRequest(
+      message,
+      requestSchema,
+      await this.chainHandler.getChainId()
+    );
+
+    const signature = await this.chainHandler.signTypedPaymentRequest(
+      typedData
+    );
     const request = {
       method: 'POST',
-      body: JSON.stringify({
-        id: requestId,
-        jsonrpc: '2.0',
-        ...message,
-      }),
+      body: JSON.stringify(message),
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
-        Authorization: await this.chainHandler.signTypedPaymentRequest(
-          buildTypedPaymentRequest(
-            message,
-            await this.chainHandler.getChainId()
-          )
-        ),
+        [OffchainHeaders.SIGNATURE]: signature,
+        [OffchainHeaders.ADDRESS]: this.chainHandler.getSendingAddress(),
       },
     };
     const response = await fetchWithRetries(`${this.apiBase}/rpc`, request);
 
     const jsonResponse = await response.json();
+
+    const responseSignature = response.headers.get(OffchainHeaders.SIGNATURE);
+    const responseAddress = response.headers.get(OffchainHeaders.ADDRESS);
+    if (Object.keys(jsonResponse).includes('error')) {
+      responseSchema = EIP712Schemas.JsonRpcErrorResponse;
+      responseSchemaName = 'JsonRpcErrorResponse';
+    }
+    const signatureVerified = await verifySignature(
+      this.chainHandler,
+      responseSignature,
+      responseAddress,
+      jsonResponse,
+      responseSchema,
+      responseSchemaName
+    );
+    if (!signatureVerified) {
+      return Err(
+        new Error(
+          `Response signature cant be verified (signature: ${responseSignature}, address: ${responseAddress})`
+        )
+      );
+    }
+
     if (jsonResponse.id !== requestId) {
       return Err(
         new Error(
@@ -128,8 +167,18 @@ export class Charge {
     }
   }
 
-  private async requestWithErrorHandling(params: PaymentMessageRequest) {
-    const response = await this.request(params);
+  private async requestWithErrorHandling(
+    params: PaymentMessageRequest,
+    schema: EIP712Parameter[],
+    responseSchema: EIP712Parameter[],
+    responseSchemaName: string
+  ) {
+    const response = await this.request(
+      params,
+      schema,
+      responseSchema,
+      responseSchemaName
+    );
     if (!response.ok) {
       const error = (response as ErrorResult<JsonRpcErrorResult>).error;
       throw new Error(error.message);
@@ -150,7 +199,12 @@ export class Charge {
       },
     };
 
-    const response = await this.requestWithErrorHandling(getPaymentInfoRequest);
+    const response = await this.requestWithErrorHandling(
+      getPaymentInfoRequest,
+      EIP712Schemas.GetPaymentInfo,
+      EIP712Schemas.GetPaymentInfoResponse,
+      'GetPaymentInfoResponse'
+    );
 
     // TODO: schema validation
     this.paymentInfo = response.result as PaymentInfo;
@@ -164,9 +218,13 @@ export class Charge {
    * @returns
    */
   async submit(payerData: PayerData) {
+    if (!this.paymentInfo) {
+      return Err(new Error('getInfo() has not been called'));
+    }
+
     // TODO: validate payerData contains all required fields by this.paymentInfo.requiredPayerData
     const transactionHash = await this.chainHandler.computeTransactionHash(
-      this.paymentInfo!
+      this.paymentInfo
     );
 
     const response = await this.sendInitChargeRequest(
@@ -197,7 +255,12 @@ export class Charge {
       },
     };
 
-    return await this.requestWithErrorHandling(initChargeRequest);
+    return await this.requestWithErrorHandling(
+      initChargeRequest,
+      EIP712Schemas.InitCharge,
+      EIP712Schemas.InitChargeResponse,
+      'InitChargeResponse'
+    );
   }
 
   private async sendReadyForSettlementRequest() {
@@ -208,12 +271,21 @@ export class Charge {
       },
     };
 
-    return await this.requestWithErrorHandling(readyForSettlementRequest);
+    return await this.requestWithErrorHandling(
+      readyForSettlementRequest,
+      EIP712Schemas.ReadyForSettlement,
+      EIP712Schemas.ReadyForSettlementResponse,
+      'ReadyForSettlementResponse'
+    );
   }
 
   private async submitTransactionOnChain() {
+    if (!this.paymentInfo) {
+      throw new Error('getInfo() has not been called');
+    }
+
     try {
-      await this.chainHandler.submitTransaction(this.paymentInfo!);
+      await this.chainHandler.submitTransaction(this.paymentInfo);
     } catch (e) {
       // TODO: retries?
       throw new OnchainFailureError(AbortCodes.COULD_NOT_PUT_TRANSACTION);
@@ -233,6 +305,11 @@ export class Charge {
       },
     };
 
-    return await this.requestWithErrorHandling(abortRequest);
+    return await this.requestWithErrorHandling(
+      abortRequest,
+      EIP712Schemas.Abort,
+      EIP712Schemas.AbortResponse,
+      'AbortResponse'
+    );
   }
 }
