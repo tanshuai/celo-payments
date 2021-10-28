@@ -795,7 +795,7 @@ tags:
     x-displayName: Abort Request (AbortParams)
     description: <SchemaDefinition schemaRef="#/components/schemas/AbortParams"/>
   - name: JsonRpcInvalidRequestErrorModel
-    x-displayName: Invalid Request (JsonRpcInvalidRequestErrorModel)
+    x-displayName: Invalid Request (JsonRpcInvalidRequestError)
     description: <SchemaDefinition schemaRef="#/components/schemas/JsonRpcInvalidRequestError"/>
   - name: JsonRpcInvalidParameterErrorModel
     x-displayName: Invalid Parameter (JsonRpcInvalidParameterError)
@@ -836,7 +836,7 @@ x-tagGroups:
   - name: ErrorModels
     x-displayName: Errors
     tags:
-      - JsonRpcInvalidRequestError
+      - JsonRpcInvalidRequestErrorModel
       - JsonRpcInvalidParameterErrorModel
       - JsonRpcMethodNotFoundErrorModel
       - JsonRpcReferenceIdNotFoundErrorModel
