@@ -318,13 +318,13 @@ export class Charge {
    *
    * @returns
    */
-  async submitTransactionOnChain() {
+  async submitTransactionOnChain(): Promise<string> {
     if (!this.paymentInfo) {
       throw new Error('getInfo() has not been called');
     }
 
     try {
-      await this.chainHandler.submitTransaction(this.paymentInfo);
+      return await this.chainHandler.submitTransaction(this.paymentInfo);
     } catch (e) {
       // TODO: retries?
       throw new OnchainFailureError(AbortCodes.COULD_NOT_PUT_TRANSACTION, e);
@@ -337,7 +337,7 @@ export class Charge {
    * @param payerData
    * @returns
    */
-  async submit(payerData: PayerData): Promise<void> {
+  async submit(payerData: PayerData): Promise<string> {
     if (!this.paymentInfo) {
       throw new Error('getInfo() has not been called');
     }
@@ -346,7 +346,7 @@ export class Charge {
 
     await this.readyForSettlement();
 
-    await this.submitTransactionOnChain();
+    return await this.submitTransactionOnChain();
   }
 
   /**
