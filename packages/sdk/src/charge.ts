@@ -191,7 +191,7 @@ export class Charge {
     }
 
     try {
-      let result = jsonResponse.result;
+      const result = jsonResponse.result;
       const resultParamater = responseTypeDefinition.schema.find(
         (p) => p.name === 'result'
       );
@@ -206,8 +206,8 @@ export class Charge {
   }
 
   private parseWithBigNumbers(result: any, type: string) {
-    let child = EIP712Schemas[type];
-    for (let field of child.schema) {
+    const child = EIP712Schemas[type];
+    for (const field of child.schema) {
       if (child.bigNumbers.includes(field.name)) {
         result[field.name] = new BigNumber(result[field.name]);
       }
