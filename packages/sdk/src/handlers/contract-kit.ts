@@ -23,7 +23,7 @@ export class SignedTxRepo {
     info: PaymentInfo,
     signer: (info) => Promise<EncodedTransaction>
   ): Promise<EncodedTransaction> {
-    if (this.txs.hasOwnProperty(info.referenceId)) {
+    if (Object.prototype.hasOwnProperty.call(this.txs, info.referenceId)) {
       return this.txs[info.referenceId].encoded;
     }
 
